@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, Image } from 'react-native';
 import {
   Appbar,
   Button,
@@ -357,7 +357,20 @@ export default function HomeScreen() {
           </Drawer.Section>
         </View>
         <Drawer.Section style={{ marginTop: 'auto' }}>
-          <Drawer.Item label="Cerrar sesión" onPress={() => console.log('Cerrar sesión')} icon="logout" />
+            <View style={{ paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#00000022', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Image source={require('../../assets/images/f1.jpg')} style={{ width: 40, height: 40, borderRadius: 20 }} />
+              <View style={{ flex: 1, flexDirection: 'column'}}>
+                <Text variant="labelSmall" style={{ opacity: 0.7 }}>Jefe de Estudios</Text>
+                <Text variant="bodyMedium" style={{ marginTop: 4, fontStyle: 'italic'}}>Reinaldo González Hernández</Text>
+              </View>
+            </View>
+          </View>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Drawer.Item label="Cerrar sesión" onPress={() => console.log('Cerrar sesión')} icon="logout" />
+            <Drawer.Item label="Configuración de la cuenta" onPress={() => console.log('Configuración de la cuenta')} icon="cog-outline" />
+
+          </View>
         </Drawer.Section>
       </View>
 
