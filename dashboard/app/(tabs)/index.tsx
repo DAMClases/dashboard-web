@@ -1,23 +1,40 @@
+import * as DocumentPicker from 'expo-document-picker';
 import * as React from 'react';
-import { ScrollView, StyleSheet, View, Image } from 'react-native';
+import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import {
+  ActivityIndicator,
   Appbar,
   Button,
   Card,
   DataTable,
   Divider,
   Drawer,
-  Snackbar,
+  List,
   Menu,
+  Snackbar,
   Switch,
   Text,
-  List,
-  ActivityIndicator,
   useTheme,
 } from 'react-native-paper';
 
 type Row = { name: string; group: string; nfc: string; enabled: boolean };
 type SectionKey = 'estadisticas' | 'alumnado' | 'profesorado' | 'nfc';
+
+type ImportedUser = {
+  id: string;
+  name: string;
+  municipio: string;
+  transporte: boolean;
+  tarjetaFisica?: number;
+  nfcId?: string;
+};
+
+type OdooCard = {
+  id: number;
+  numeroTarjeta: number;
+  nfc: string;
+  enUso: boolean;
+};
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -44,6 +61,26 @@ export default function HomeScreen() {
 
   const [loading, setLoading] = React.useState(false);
 
+
+  // Adición JERO
+  const [snackMessage, setSnackMessage] = React.useState(''); // Para mensajes personalizados del Snackbar
+
+  // Datos para la pestaña NFC
+  const [importData, setImportData] = React.useState<ImportedUser[]>([]);
+  const [odooCards, setOdooCards] = React.useState<OdooCard[]>([
+    { id: 1, numeroTarjeta: 1, nfc: 'A1:B2:C3:D4', enUso: true },
+    { id: 2, numeroTarjeta: 2, nfc: 'F5:E6:D7:C8', enUso: false },
+    { id: 3, numeroTarjeta: 3, nfc: '99:88:77:66', enUso: false },
+    { id: 4, numeroTarjeta: 4, nfc: '11:22:33:44', enUso: false },
+    { id: 5, numeroTarjeta: 5, nfc: 'AA:BB:CC:DD', enUso: false },
+  ]);
+
+  const showSnackMsg = (msg: string) => {
+    setSnackMessage(msg);
+    setSnackVisible(true);
+  };
+  // Adición JERO
+
   React.useEffect(() => {
     if (activeSection === 'alumnado') {
       setLoading(true);
@@ -57,93 +94,93 @@ export default function HomeScreen() {
           {
             group: '1º ESO B',
             students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport:['No', 'Si', 'No'],
+            transport: ['No', 'Si', 'No'],
           },
           {
             group: '2º ESO A',
             students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport:['Si', 'No', 'Si'],
+            transport: ['Si', 'No', 'Si'],
           },
           {
             group: '2º ESO B',
             students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport:['No', 'Si', 'No'],
+            transport: ['No', 'Si', 'No'],
           },
           {
             group: '3º ESO A',
             students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport:['Si', 'No', 'Si'],
+            transport: ['Si', 'No', 'Si'],
           },
           {
             group: '3º ESO B',
             students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport:['No', 'Si', 'No'],
+            transport: ['No', 'Si', 'No'],
           },
           {
             group: '4º ESO A',
             students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport:['Si', 'No', 'Si'],
+            transport: ['Si', 'No', 'Si'],
           },
           {
             group: '4º ESO B',
             students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport:['No', 'Si', 'No'],
+            transport: ['No', 'Si', 'No'],
           },
           {
             group: '1º BACH CIENCIAS',
             students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport:['Si', 'No', 'Si'],
+            transport: ['Si', 'No', 'Si'],
           },
           {
             group: '1º BACH HUMANIDADES',
             students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport:['No', 'Si', 'No'],
+            transport: ['No', 'Si', 'No'],
           },
           {
             group: '2º BACH CIENCIAS',
             students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport:['Si', 'No', 'Si'],
+            transport: ['Si', 'No', 'Si'],
           },
           {
             group: '2º BACH HUMANIDADES',
             students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport:['No', 'Si', 'No'],
+            transport: ['No', 'Si', 'No'],
           },
           {
             group: '1º CFGM SMYR',
             students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport:['No', 'Si', 'No'],
+            transport: ['No', 'Si', 'No'],
           },
           {
             group: '2º CFGM SMYR',
             students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport:['No', 'Si', 'No'],
+            transport: ['No', 'Si', 'No'],
           },
           {
             group: '1º CFGM ACMN',
             students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport:['No', 'Si', 'No'],
+            transport: ['No', 'Si', 'No'],
           },
           {
             group: '2º CFGM ACMN',
             students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport:['No', 'Si', 'No'],
-          },          {
+            transport: ['No', 'Si', 'No'],
+          }, {
             group: '1º CFGS DAM',
             students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport:['No', 'Si', 'No'],
-          },          {
+            transport: ['No', 'Si', 'No'],
+          }, {
             group: '2º CFGS DAM',
             students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport:['No', 'Si', 'No'],
+            transport: ['No', 'Si', 'No'],
           },
           {
             group: '1º CFGS GFMN',
             students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport:['No', 'Si', 'No'],
-          },  
-          
-          
+            transport: ['No', 'Si', 'No'],
+          },
+
+
         ]);
         setLoading(false);
       }, 1000); // Simula carga
@@ -196,26 +233,26 @@ export default function HomeScreen() {
             teachers: [
               'María del Mar Rodríguez González'
             ]
-          },          
+          },
           {
             department: 'Formacion y Orientación Laboral',
             teachers: [
               'Ancor García Rodríguez'
             ]
-          },          
+          },
           {
             department: 'Francés',
             teachers: [
               'Danielle Marie Segalen'
             ]
-          },          
+          },
           {
             department: 'Geografía e Historia',
             teachers: [
               'José Antonio Lima Cruz',
               'Jaime López Pérez'
             ]
-          },          
+          },
           {
             department: 'Informática',
             teachers: [
@@ -235,7 +272,7 @@ export default function HomeScreen() {
               'Carmen Dolores Rodríguez Hernández',
               'Zenaida Sonia Yanes González'
             ]
-          },  
+          },
           {
             department: 'Lengua + Latín',
             teachers: [
@@ -244,7 +281,7 @@ export default function HomeScreen() {
               'María Raquel Luis Trujillo',
               'Tatiana Pérez Fernández'
             ]
-          },  
+          },
           {
             department: 'Matemáticas',
             teachers: [
@@ -253,13 +290,13 @@ export default function HomeScreen() {
               'Eva María Quintero Núñez',
               'Rafael Andrés Suárez Ruiz',
             ]
-          },  
+          },
           {
             department: 'Música',
             teachers: [
               'Alfonso Marín Romero'
             ]
-          },  
+          },
           {
             department: 'Orientación/Pedagogía Terapéutica',
             teachers: [
@@ -271,7 +308,7 @@ export default function HomeScreen() {
             teachers: [
               'Gustavo Márquez Carro'
             ]
-          }      
+          }
         ]);
         setTeachersLoading(false);
       }, 800);
@@ -297,51 +334,247 @@ export default function HomeScreen() {
     setSnackVisible(true);
   };
   const getDepartmentIcon = (department: string) => {
-  const icons: Record<string, string> = {
-    'Informática': 'keyboard',
-    'Matemáticas': 'calculator',
-    'Agrarias': 'sprout',
-    'Educación Física': 'run',
-    'Música': 'music-note',
-    'Biología y Geología': 'dna',
-    'Dibujo': 'draw',
-    'Economía': 'cash',
-    'Filosofía': 'bank',
-    'Formacion y Orientación Laboral': 'briefcase',
-    'Francés': 'eiffel-tower',
-    'Geografía e Historia': 'earth',
-    'Inglés': 'chat-outline',
-    'Lengua + Latín': 'book',
-    'Orientación/Pedagogía Terapéutica': 'account-heart',
-    'Religión': 'church',
+    const icons: Record<string, string> = {
+      'Informática': 'keyboard',
+      'Matemáticas': 'calculator',
+      'Agrarias': 'sprout',
+      'Educación Física': 'run',
+      'Música': 'music-note',
+      'Biología y Geología': 'dna',
+      'Dibujo': 'draw',
+      'Economía': 'cash',
+      'Filosofía': 'bank',
+      'Formacion y Orientación Laboral': 'briefcase',
+      'Francés': 'eiffel-tower',
+      'Geografía e Historia': 'earth',
+      'Inglés': 'chat-outline',
+      'Lengua + Latín': 'book',
+      'Orientación/Pedagogía Terapéutica': 'account-heart',
+      'Religión': 'church',
+    };
+
+    const colors: Record<string, string> = {
+      'Agrarias': '#4CAF50',
+      'Biología y Geología': '#b4bb35',
+      'Dibujo': '#9c27b0',
+      'Economía': '#ff9800',
+      'Educación Física': '#f44336',
+      'Filosofía': '#3f51b5',
+      'Formacion y Orientación Laboral': '#009688',
+      'Francés': '#e91e63',
+      'Geografía e Historia': '#795548',
+      'Informática': '#2196f3',
+      'Inglés': '#673ab7',
+      'Lengua + Latín': '#ff5722',
+      'Matemáticas': '#1612f8',
+      'Música': '#00bcd4',
+      'Orientación/Pedagogía Terapéutica': '#8bc34a',
+      'Religión': '#607d8b',
+    };
+
+    return {
+      icon: icons[department] || 'folder',
+      color: colors[department],
+    };
   };
 
-  const colors: Record<string, string> = {
-    'Agrarias': '#4CAF50',
-    'Biología y Geología': '#b4bb35',
-    'Dibujo': '#9c27b0',
-    'Economía': '#ff9800',
-    'Educación Física': '#f44336',
-    'Filosofía': '#3f51b5',
-    'Formacion y Orientación Laboral': '#009688',
-    'Francés': '#e91e63',
-    'Geografía e Historia': '#795548',
-    'Informática': '#2196f3',
-    'Inglés': '#673ab7',
-    'Lengua + Latín': '#ff5722',
-    'Matemáticas': '#1612f8',
-    'Música': '#00bcd4',
-    'Orientación/Pedagogía Terapéutica': '#8bc34a',
-    'Religión': '#607d8b',
+  // --- LÓGICA NUEVA PARA LA SECCIÓN NFC ---
+
+  const abrirExploradorArchivos = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['text/csv', 'application/vnd.ms-excel'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      const fileAsset = result.assets[0];
+
+      if (fileAsset.file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const texto = e.target?.result as string;
+          procesarTextoCSV(texto);
+        };
+        reader.readAsText(fileAsset.file, 'UTF-8');
+      } else {
+        const response = await fetch(fileAsset.uri);
+        const texto = await response.text();
+        procesarTextoCSV(texto);
+      }
+    } catch (err) {
+      console.error("Error:", err);
+      showSnackMsg('Error al leer el archivo.');
+    }
   };
 
-  return {
-    icon: icons[department] || 'folder',
-    color: colors[department], 
+  const procesarTextoCSV = (csvText: string) => {
+    const lines = csvText.trim().split('\n');
+    if (lines.length < 2) return showSnackMsg('CSV vacío o inválido.');
+
+    const headers = lines[0].split(';').map(h => h.replace(/"/g, '').trim());
+    const parsedData: ImportedUser[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line) continue;
+
+      const values = line.split(';').map(v => v.replace(/"/g, '').trim());
+      const rowData: Record<string, string> = {};
+      headers.forEach((header, index) => { rowData[header] = values[index]; });
+
+      const fullName = `${rowData['Nombre'] || ''} ${rowData['Primer apellido'] || ''} ${rowData['Segundo apellido'] || ''}`.trim();
+      const municipio = rowData['Municipio actual'] || 'DESCONOCIDO';
+      const needsTransport = municipio.toUpperCase() !== 'SAN JUAN DE LA RAMBLA';
+
+      if (fullName.length > 0) {
+        parsedData.push({
+          id: rowData['Nif - Nie'] || rowData['Cial'] || `ID-${i}`,
+          name: fullName,
+          municipio: municipio,
+          transporte: needsTransport,
+        });
+      }
+    }
+    setImportData(parsedData);
+    showSnackMsg(`Importados ${parsedData.length} alumnos.`);
   };
-};
 
+  const handleAutoFill = () => {
+    if (importData.length === 0) return showSnackMsg('Primero importa un CSV.');
 
+    let poolTarjetas = [...odooCards];
+    let usuariosActualizados = [...importData];
+    let asignadas = 0;
+
+    usuariosActualizados = usuariosActualizados.map((user) => {
+      if (user.tarjetaFisica) return user;
+      const freeIndex = poolTarjetas.findIndex((c) => !c.enUso);
+
+      if (freeIndex !== -1) {
+        const tarjeta = poolTarjetas[freeIndex];
+        poolTarjetas[freeIndex] = { ...tarjeta, enUso: true };
+        asignadas++;
+        return { ...user, tarjetaFisica: tarjeta.numeroTarjeta, nfcId: tarjeta.nfc };
+      }
+      return user;
+    });
+
+    if (asignadas > 0) {
+      setImportData(usuariosActualizados);
+      setOdooCards(poolTarjetas);
+      showSnackMsg(`Asignadas ${asignadas} tarjetas.`);
+    } else {
+      showSnackMsg('No hay tarjetas libres.');
+    }
+  };
+
+  // --- CREDENCIALES DE ODOO ---
+  const ODOO_URL = 'https://10.102.11.155';
+  const ODOO_DB = 'iesaccess';
+  const ODOO_USER = 'admin@admin.com';
+  const ODOO_PASS = 'admin';
+
+  // --- LÓGICA PARA SUBIR A ODOO ---
+  const subirDatosAOdoo = async () => {
+    if (importData.length === 0) return showSnackMsg('No hay datos para subir.');
+    showSnackMsg('Conectando con Odoo...');
+
+    try {
+      // 1. AUTENTICACIÓN
+      const authResponse = await fetch(`${ODOO_URL}/web/session/authenticate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'call',
+          params: {
+            db: ODOO_DB,
+            login: ODOO_USER,
+            password: ODOO_PASS,
+          },
+        }),
+      });
+
+      const authData = await authResponse.json();
+      if (authData.error) {
+        console.error("Error de Auth:", authData.error);
+        return showSnackMsg('Error de autenticación. Revisa credenciales.');
+      }
+
+      // 2. PREPARAR DATOS Y ENVIARLOS
+      let subidos = 0;
+      let errores = 0;
+
+      for (const user of importData) {
+        
+        let nfcLimpio;
+        if (user.nfcId) {
+            nfcLimpio = user.nfcId.replace(/[^A-Za-z0-9]/g, '').toUpperCase(); 
+            // Esto convierte "A1:B2:C3:D4" en "A1B2C3D4"
+        }
+        else{
+            nfcLimpio = false;
+        }
+
+        const employeeData = {
+          name: user.name,
+          identification_id: user.id, 
+          transporte: user.transporte, 
+          barcode: nfcLimpio,         // <-- Ahora mandamos la versión limpia sin los ":"
+          custom_role: 'student'      
+        };
+
+        const createResponse = await fetch(`${ODOO_URL}/web/dataset/call_kw`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            method: 'call',
+            params: {
+              model: 'hr.employee',
+              method: 'create',
+              // OJO AQUÍ: Odoo espera una lista dentro de la lista de args [[ {...} ]]
+              args: [[employeeData]], 
+              kwargs: {},
+            },
+          }),
+        });
+
+        const createResult = await createResponse.json();
+        
+        // --- CONTROL DE ERRORES SILENCIOSOS ---
+        if (createResult.error) {
+            errores++;
+            // Imprimimos el error exacto que escupe Odoo en la consola (Ej: Falta un campo obligatorio)
+            console.error(`Odoo rechazó al alumno ${user.name}:`, createResult.error.data.message);
+        } else {
+            subidos++;
+        }
+      }
+
+      if (errores > 0) {
+        showSnackMsg(`Se subieron ${subidos} registros, pero fallaron ${errores}. Revisa la consola (F12).`);
+      } else {
+        showSnackMsg(`¡Éxito total! Se han subido ${subidos} registros a Odoo.`);
+      }
+
+    } catch (err) {
+      console.error("Error de Red/Fetch:", err);
+      showSnackMsg('Error crítico de conexión con Odoo.');
+    }
+  };
+
+  const toggleTransporteImport = (index: number) => {
+    setImportData((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], transporte: !next[index].transporte };
+      return next;
+    });
+  };
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
       <View style={[styles.sidebar, { backgroundColor: theme.colors.surface }]}>
@@ -357,12 +590,12 @@ export default function HomeScreen() {
           </Drawer.Section>
         </View>
         <Drawer.Section style={{ marginTop: 'auto' }}>
-            <View style={{ paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#00000022', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#00000022', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <Image source={require('../../assets/images/f1.jpg')} style={{ width: 40, height: 40, borderRadius: 20 }} />
-              <View style={{ flex: 1, flexDirection: 'column'}}>
+              <View style={{ flex: 1, flexDirection: 'column' }}>
                 <Text variant="labelSmall" style={{ opacity: 0.7 }}>Jefe de Estudios</Text>
-                <Text variant="bodyMedium" style={{ marginTop: 4, fontStyle: 'italic'}}>Reinaldo González Hernández</Text>
+                <Text variant="bodyMedium" style={{ marginTop: 4, fontStyle: 'italic' }}>Reinaldo González Hernández</Text>
               </View>
             </View>
           </View>
@@ -379,10 +612,10 @@ export default function HomeScreen() {
       <View style={styles.content}>
         <Appbar.Header>
           <Appbar.Content title="IES San Juan de la Rambla" />
-          <Button onPress={() => {}} compact>
+          <Button onPress={() => { }} compact>
             Visión
           </Button>
-          <Appbar.Action icon="magnify" onPress={() => {}} />
+          <Appbar.Action icon="magnify" onPress={() => { }} />
         </Appbar.Header>
 
         <ScrollView contentContainerStyle={styles.container}>
@@ -420,7 +653,7 @@ export default function HomeScreen() {
                       0
                     </Text>
                   </Card.Content>
-                </Card>                
+                </Card>
                 <Card style={styles.kpiCard}>
                   <Card.Content style={styles.kpiContent}>
                     <Text variant="labelSmall" style={styles.kpiText}>
@@ -507,7 +740,7 @@ export default function HomeScreen() {
                     {/* Nivel 1: ESO */}
                     <List.Accordion
                       title="ESO"
-                      left={(props) => <List.Icon {...props} icon="folder" color="#c03415"/>}
+                      left={(props) => <List.Icon {...props} icon="folder" color="#c03415" />}
                     >
                       {studentsData
                         .filter((g) => g.group.includes('ESO'))
@@ -536,7 +769,7 @@ export default function HomeScreen() {
                     {/* Nivel 1: Bachillerato */}
                     <List.Accordion
                       title="Bachillerato"
-                      left={(props) => <List.Icon {...props} icon="folder" color="#f2d725"/>}
+                      left={(props) => <List.Icon {...props} icon="folder" color="#f2d725" />}
                     >
                       {studentsData
                         .filter((g) => g.group.includes('BACH'))
@@ -565,7 +798,7 @@ export default function HomeScreen() {
                     {/* Nivel 1: Ciclos formativos */}
                     <List.Accordion
                       title="Ciclos Formativos"
-                      left={(props) => <List.Icon {...props} icon="folder" color="#1565C0"/>}
+                      left={(props) => <List.Icon {...props} icon="folder" color="#1565C0" />}
                     >
                       {studentsData
                         .filter((g) => g.group.includes('CFGM') || g.group.includes('CFGS'))
@@ -610,30 +843,89 @@ export default function HomeScreen() {
                     </Text>
 
                     {teachersData.map((dept, i) => (
-                    <List.Accordion
-                      key={`dept-${i}`}
-                      title={`${dept.department} (${dept.teachers.length})`}
-                      left={(props) => {
-                        const { icon, color } = getDepartmentIcon(dept.department);
-                        return <List.Icon {...props} icon={icon} color={color} />;
-                      }}
-                    >
-                      {dept.teachers.map((teacher, j) => (
-                        <List.Item
-                          key={j}
-                          title={teacher}
-                          left={(props) => <List.Icon {...props} icon="account-tie" />}
-                        />
-                      ))}
-                    </List.Accordion>
-                  ))}
+                      <List.Accordion
+                        key={`dept-${i}`}
+                        title={`${dept.department} (${dept.teachers.length})`}
+                        left={(props) => {
+                          const { icon, color } = getDepartmentIcon(dept.department);
+                          return <List.Icon {...props} icon={icon} color={color} />;
+                        }}
+                      >
+                        {dept.teachers.map((teacher, j) => (
+                          <List.Item
+                            key={j}
+                            title={teacher}
+                            left={(props) => <List.Icon {...props} icon="account-tie" />}
+                          />
+                        ))}
+                      </List.Accordion>
+                    ))}
 
                   </>
                 )}
               </Card.Content>
             </Card>
           )}
-
+        {activeSection === 'nfc' && (
+            <Card style={styles.block}>
+              <Card.Title 
+                title="Validación de Datos e Inserción" 
+                subtitle="Selecciona un archivo desde tu PC para iniciar"
+                right={() => (
+                  <View style={{ flexDirection: 'row', gap: 8, paddingRight: 16 }}>
+                    <Button mode="outlined" icon="folder-open" onPress={abrirExploradorArchivos}>
+                      1. Buscar archivo en PC
+                    </Button>
+                    <Button mode="contained-tonal" icon="auto-fix" onPress={handleAutoFill} disabled={importData.length === 0}>
+                      2. Auto-asignar Tarjetas
+                    </Button>
+                    <Button 
+                      mode="contained" 
+                      icon="cloud-upload" 
+                      onPress={subirDatosAOdoo}  // <-- CAMBIO AQUÍ
+                      disabled={importData.length === 0}>
+                      3. Subir a Odoo
+                    </Button>
+                  </View>
+                )} 
+              />
+              <Card.Content>
+                {importData.length === 0 ? (
+                  <View style={{ padding: 40, alignItems: 'center' }}>
+                    <Text variant="bodyLarge" style={{ color: 'gray' }}>No hay datos. Pulsa "Buscar archivo en PC".</Text>
+                  </View>
+                ) : (
+                  <DataTable>
+                    <DataTable.Header>
+                      <DataTable.Title style={{ flex: 2 }}>Nombre Completo</DataTable.Title>
+                      <DataTable.Title>Municipio</DataTable.Title>
+                      <DataTable.Title numeric>Transporte</DataTable.Title>
+                      <DataTable.Title numeric>Nº Tarjeta</DataTable.Title>
+                      <DataTable.Title>Serial NFC</DataTable.Title>
+                    </DataTable.Header>
+                    {importData.map((row, i) => (
+                      <React.Fragment key={`${row.id}-${i}`}>
+                        <DataTable.Row>
+                          <DataTable.Cell style={{ flex: 2 }}>{row.name}</DataTable.Cell>
+                          <DataTable.Cell><Text numberOfLines={1} style={{ fontSize: 12 }}>{row.municipio}</Text></DataTable.Cell>
+                          <DataTable.Cell numeric>
+                            <Switch value={row.transporte} onValueChange={() => toggleTransporteImport(i)} />
+                          </DataTable.Cell>
+                          <DataTable.Cell numeric>
+                            {row.tarjetaFisica ? <Text style={{ fontWeight: 'bold' }}>#{row.tarjetaFisica}</Text> : <Text style={{ color: 'gray' }}>-</Text>}
+                          </DataTable.Cell>
+                          <DataTable.Cell>
+                            {row.nfcId ? row.nfcId : <Text style={{ color: 'gray', fontStyle: 'italic' }}>Sin asignar</Text>}
+                          </DataTable.Cell>
+                        </DataTable.Row>
+                        {i < importData.length - 1 ? <Divider /> : null}
+                      </React.Fragment>
+                    ))}
+                  </DataTable>
+                )}
+              </Card.Content>
+            </Card>
+          )}
 
         </ScrollView>
 
@@ -642,7 +934,7 @@ export default function HomeScreen() {
           onDismiss={() => setSnackVisible(false)}
           action={{ label: 'OK', onPress: () => setSnackVisible(false) }}
         >
-          Cambios guardados (demo)
+          {snackMessage || 'Cambios guardados (demo)'}
         </Snackbar>
       </View>
     </View>
