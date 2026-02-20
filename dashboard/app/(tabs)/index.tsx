@@ -65,6 +65,42 @@ export default function HomeScreen() {
   // Adición JERO
   const [snackMessage, setSnackMessage] = React.useState(''); // Para mensajes personalizados del Snackbar
 
+  const [dashboardData, setDashboardData] = React.useState<any>(null);
+
+  // Guarda qué filtro estamos viendo ('faltas', 'retrasos', 'recreo', 'salidas_anticipadas')
+  const [activeFilter, setActiveFilter] = React.useState<string | null>(null); 
+  const [loadingStats, setLoadingStats] = React.useState(false);
+
+  React.useEffect(() => {
+    if (activeSection === 'estadisticas') {
+      cargarEstadisticas();
+    }
+  }, [activeSection]);
+
+  const cargarEstadisticas = async () => {
+    setLoadingStats(true);
+    try {
+      const response = await fetch(`${ODOO_URL}/api/ies/dashboard_data`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ jsonrpc: '2.0', params: {} }),
+      });
+      const result = await response.json();
+      
+      if (result.result && result.result.status === 'success') {
+        setDashboardData(result.result.data);
+        // Por defecto, mostramos la lista de faltas al cargar
+        setActiveFilter('faltas'); 
+      } else {
+        showSnackMsg('Error al cargar estadísticas');
+      }
+    } catch (error) {
+      showSnackMsg('Error de red al cargar dashboard');
+    }
+    setLoadingStats(false);
+  };
+
   // Datos para la pestaña NFC
   const [importData, setImportData] = React.useState<ImportedUser[]>([]);
   const [odooCards, setOdooCards] = React.useState<OdooCard[]>([
@@ -629,7 +665,7 @@ export default function HomeScreen() {
                       Total de faltas
                     </Text>
                     <Text variant="headlineMedium" style={styles.kpiText}>
-                      0
+                      {dashboardData ? dashboardData.stats.faltas : '-'}
                     </Text>
                   </Card.Content>
                 </Card>
@@ -640,7 +676,7 @@ export default function HomeScreen() {
                       Total de retrasos
                     </Text>
                     <Text variant="headlineMedium" style={styles.kpiText}>
-                      0
+                      {dashboardData ? dashboardData.stats.retrasos : '-'}
                     </Text>
                   </Card.Content>
                 </Card>
@@ -650,7 +686,7 @@ export default function HomeScreen() {
                       Total de alumnos en el recreo
                     </Text>
                     <Text variant="headlineMedium" style={styles.kpiText}>
-                      0
+                      {dashboardData ? dashboardData.stats.recreo : '-'}
                     </Text>
                   </Card.Content>
                 </Card>
@@ -660,7 +696,7 @@ export default function HomeScreen() {
                       Total de salidas anticipadas
                     </Text>
                     <Text variant="headlineMedium" style={styles.kpiText}>
-                      0
+                      {dashboardData ? dashboardData.stats.salidas_anticipadas : '-'}
                     </Text>
                   </Card.Content>
                 </Card>
@@ -669,23 +705,70 @@ export default function HomeScreen() {
               <Card style={styles.block}>
                 <Card.Title
                   title="Control de acceso"
+                  subtitle={
+                    activeFilter 
+                      ? `Mostrando: ${activeFilter.replace('_', ' ').toUpperCase()}` 
+                      : 'Selecciona un filtro'
+                  }
                   right={() => (
                     <Menu
                       visible={menuVisible}
                       onDismiss={closeMenu}
-                      anchor={<Button onPress={openMenu}>Filtrar por</Button>}
+                      anchor={<Button onPress={openMenu} icon="filter">Filtrar por</Button>}
                     >
-                      <Menu.Item onPress={() => closeMenu()} title="Faltas" />
-                      <Menu.Item onPress={() => closeMenu()} title="Retrasos" />
-                      <Menu.Item onPress={() => closeMenu()} title="Recreo" />
-                      <Menu.Item onPress={() => closeMenu()} title="Salidas anticipadas" />
+                      <Menu.Item onPress={() => { setActiveFilter('faltas'); closeMenu(); }} title="Faltas" />
+                      <Menu.Item onPress={() => { setActiveFilter('retrasos'); closeMenu(); }} title="Retrasos" />
+                      <Menu.Item onPress={() => { setActiveFilter('recreo'); closeMenu(); }} title="Recreo" />
+                      <Menu.Item onPress={() => { setActiveFilter('salidas_anticipadas'); closeMenu(); }} title="Salidas anticipadas" />
                     </Menu>
                   )}
                 />
                 <Card.Content>
-                  <View style={styles.chartPlaceholder}>
-                    <Text variant="labelSmall">Gráficas (placeholder)</Text>
-                  </View>
+                  {loadingStats ? (
+                    <ActivityIndicator style={{ margin: 20 }} />
+                  ) : dashboardData && activeFilter ? (
+                    <DataTable>
+                      <DataTable.Header>
+                        <DataTable.Title style={{ flex: 2 }}>Alumno/a</DataTable.Title>
+                        <DataTable.Title>Grupo</DataTable.Title>
+                        <DataTable.Title>Edad</DataTable.Title>
+                        <DataTable.Title>Estado</DataTable.Title>
+                      </DataTable.Header>
+                      
+                      {/* Aquí leemos dinámicamente la lista seleccionada en el menú */}
+                      {dashboardData.lists[activeFilter].length === 0 ? (
+                        <View style={{ padding: 20, alignItems: 'center' }}>
+                          <Text style={{ color: 'gray' }}>No hay registros para este filtro.</Text>
+                        </View>
+                      ) : (
+                        dashboardData.lists[activeFilter].map((student: any, index: number) => (
+                          <React.Fragment key={student.id}>
+                            <DataTable.Row>
+                              <DataTable.Cell style={{ flex: 2 }}>{student.nombre}</DataTable.Cell>
+                              <DataTable.Cell>{student.grupo}</DataTable.Cell>
+                              <DataTable.Cell>
+                                {student.mayor_edad ? (
+                                  <Text style={{ color: 'green', fontWeight: 'bold' }}>+18</Text>
+                                ) : (
+                                  <Text style={{ color: 'red' }}>-18</Text>
+                                )}
+                              </DataTable.Cell>
+                              <DataTable.Cell>
+                                <Text style={{ fontStyle: 'italic', color: student.estado === 'FICHADO' ? 'green' : 'gray' }}>
+                                  {student.estado}
+                                </Text>
+                              </DataTable.Cell>
+                            </DataTable.Row>
+                            {index < dashboardData.lists[activeFilter].length - 1 && <Divider />}
+                          </React.Fragment>
+                        ))
+                      )}
+                    </DataTable>
+                  ) : (
+                    <View style={styles.chartPlaceholder}>
+                      <Text variant="labelSmall">Cargando datos del servidor...</Text>
+                    </View>
+                  )}
                 </Card.Content>
               </Card>
 
