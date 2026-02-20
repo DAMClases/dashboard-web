@@ -30,6 +30,14 @@ type ImportedUser = {
   nfcId?: string;
 };
 
+type ImportedTeacher = {
+  id: string;
+  name: string;
+  alias: string;
+  departamento: string;
+}
+
+
 type OdooCard = {
   id: number;
   numeroTarjeta: number;
@@ -249,36 +257,66 @@ export default function HomeScreen() {
   // --- LÓGICA NUEVA PARA LA SECCIÓN NFC ---
 
   const abrirExploradorArchivos = async (tipoUsuario: 'alumno' | 'profesor') => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['text/csv', 'application/vnd.ms-excel'],
-        copyToCacheDirectory: true,
-      });
+    if (tipoUsuario === 'alumno'){
+      try {
+            const result = await DocumentPicker.getDocumentAsync({
+              type: ['text/csv', 'application/vnd.ms-excel'],
+              copyToCacheDirectory: true,
+            });
 
-      if (result.canceled) return;
+            if (result.canceled) return;
 
-      const fileAsset = result.assets[0];
+            const fileAsset = result.assets[0];
 
-      if (fileAsset.file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const texto = e.target?.result as string;
-          procesarTextoCSV(texto, tipoUsuario);
-        };
-        reader.readAsText(fileAsset.file, 'UTF-8');
-      } else {
-        const response = await fetch(fileAsset.uri);
-        const texto = await response.text();
-        procesarTextoCSV(texto, tipoUsuario);
-      }
-    } catch (err) {
-      console.error("Error:", err);
-      showSnackMsg('Error al leer el archivo.');
+            if (fileAsset.file) {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                const texto = e.target?.result as string;
+                procesarTextoCSV(texto);
+              };
+              reader.readAsText(fileAsset.file, 'UTF-8');
+            } else {
+              const response = await fetch(fileAsset.uri);
+              const texto = await response.text();
+              procesarTextoCSV(texto);
+            }
+          } catch (err) {
+            console.error("Error:", err);
+            showSnackMsg('Error al leer el archivo.');
+          }
+        }
+      else if (tipoUsuario === 'profesor'){
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+              type: ['text/csv', 'application/vnd.ms-excel'],
+              copyToCacheDirectory: true,
+            });
+
+            if (result.canceled) return;
+
+            const fileAsset = result.assets[0];
+
+            if (fileAsset.file) {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                const texto = e.target?.result as string;
+                procesarTextoCSVProfesor(texto);
+              };
+              reader.readAsText(fileAsset.file, 'UTF-8');
+            } else {
+              const response = await fetch(fileAsset.uri);
+              const texto = await response.text();
+              procesarTextoCSVProfesor(texto);
+            }
+          } catch (err) {
+            console.error("Error:", err);
+            showSnackMsg('Error al leer el archivo.');
+          }
+      };
     }
-  };
+    
 
-  const procesarTextoCSV = (csvText: string, tipoUsuario: 'alumno' | 'profesor') => {
-    if (tipoUsuario === 'alumno') {
+  const procesarTextoCSV = (csvText: string) => {
       const lines = csvText.trim().split('\n');
       if (lines.length < 2) return showSnackMsg('CSV vacío o inválido.');
 
@@ -309,47 +347,42 @@ export default function HomeScreen() {
     }
     setImportData(parsedData);
     showSnackMsg(`Importados ${parsedData.length} alumnos.`);
-  }
-  else{
-      const lines = csvText.trim().split('\n');
-      if (lines.length < 2) return showSnackMsg('CSV vacío o inválido.');
-
-      const rawHeaders = lines[0].split(';').map(h => h.replace(/"/g, '').trim().toUpperCase());
-      const parsedData: ImportedUser[] = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i];
-        if (!line) continue;
-
-        const values = line.split(';').map(v => v.replace(/"/g, '').trim());
-        const row: Record<string, string> = {};
-        
-        rawHeaders.forEach((header, idx) => { row[header] = values[idx]; });
-
-        const nif = row['N.I.F./N.I.E.'] || `ID-${i}`;
-        const nombre = row['Nombre'] || '';
-        const apellido1 = row['Primer Apellido'] || '';
-        const apellido2 = row['Segundo Apellido'] || '';
-        const alias = row['Alias'] || '';
-        
-        const fullName = `${nombre} ${apellido1} ${apellido2}`.replace(/\s+/g, ' ').trim();
-
-        if (fullName.length > 0) {
-          parsedData.push({
-            id: nif,
-            name: fullName,
-            municipio: '',
-            transporte: false,
-            desayuno: false,
-          });
-        }
 }
-// Actualizar estado de la UI con parsedData
-  setImportData(parsedData);
-    showSnackMsg(`Importados ${parsedData.length} profesores.`);
+  {/*Función de Cristo, para separar la lógica de procesar texto CSV entre alumnos y profesores, ya que el formato de ambos es diferente.*/}
+  
+  
+const procesarTextoCSVProfesor = (csvText: string) => {
+    const lines = csvText.trim().split('\n');
+    if (lines.length < 2) return showSnackMsg('CSV vacío o inválido.');
+    const rawHeaders = lines[0].split(';').map(h => h.replace(/"/g, '').trim().toUpperCase());
+    const parsedData: ImportedTeacher[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line) continue;
+      const values = line.split(';').map(v => v.replace(/"/g, '').trim());
+      const row: Record<string, string> = {};
+      
+      rawHeaders.forEach((header, idx) => { row[header] = values[idx]; });
 
+      const nif = row['N.I.F./N.I.E.'] || `ID-${i}`;
+      const nombre = row['Nombre'] || '';
+      const apellido1 = row['Primer Apellido'] || '';
+      const apellido2 = row['Segundo Apellido'] || '';
+      const alias = row['Alias'] || '';
+    
+      const fullName = `${nombre} ${apellido1} ${apellido2}`.replace(/\s+/g, ' ').trim();
+      if (fullName.length > 0) {
+        parsedData.push({
+          id: nif,
+          name: fullName,
+          alias: alias,
+          departamento: '',
+        });
+      }
   }
-  };
+  setImportData(parsedData);
+  showSnackMsg(`Importados ${parsedData.length} profesores.`);
+};
 
   const handleAutoFill = () => {
     if (importData.length === 0) return showSnackMsg('Primero importa un CSV.');
