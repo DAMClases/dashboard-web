@@ -25,6 +25,7 @@ type ImportedUser = {
   name: string;
   municipio: string;
   transporte: boolean;
+  desayuno: boolean;
   tarjetaFisica?: number;
   nfcId?: string;
 };
@@ -559,7 +560,7 @@ export default function HomeScreen() {
           name: user.name,
           identification_id: user.id, 
           transporte: user.transporte, 
-          barcode: nfcLimpio,         // <-- Ahora mandamos la versión limpia sin los ":"
+          barcode: nfcLimpio,
           custom_role: 'student'      
         };
 
@@ -611,6 +612,15 @@ export default function HomeScreen() {
       return next;
     });
   };
+
+  const toggleDesayunoImport = (index: number) => {
+    setImportData((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], desayuno: !next[index].desayuno };
+      return next;
+    });
+  };
+
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
       <View style={[styles.sidebar, { backgroundColor: theme.colors.surface }]}>
@@ -983,6 +993,7 @@ export default function HomeScreen() {
                       <DataTable.Title style={{ flex: 2 }}>Nombre Completo</DataTable.Title>
                       <DataTable.Title>Municipio</DataTable.Title>
                       <DataTable.Title numeric>Transporte</DataTable.Title>
+                      <DataTable.Title numeric>Desayuno</DataTable.Title>
                       <DataTable.Title numeric>Nº Tarjeta</DataTable.Title>
                       <DataTable.Title>Serial NFC</DataTable.Title>
                     </DataTable.Header>
@@ -993,6 +1004,9 @@ export default function HomeScreen() {
                           <DataTable.Cell><Text numberOfLines={1} style={{ fontSize: 12 }}>{row.municipio}</Text></DataTable.Cell>
                           <DataTable.Cell numeric>
                             <Switch value={row.transporte} onValueChange={() => toggleTransporteImport(i)} />
+                          </DataTable.Cell>
+                          <DataTable.Cell numeric>
+                            <Switch value={row.desayuno} onValueChange={() => toggleDesayunoImport(i)} />
                           </DataTable.Cell>
                           <DataTable.Cell numeric>
                             {row.tarjetaFisica ? <Text style={{ fontWeight: 'bold' }}>#{row.tarjetaFisica}</Text> : <Text style={{ color: 'gray' }}>-</Text>}
