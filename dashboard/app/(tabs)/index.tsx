@@ -18,7 +18,7 @@ import {
 } from 'react-native-paper';
 
 type Row = { name: string; group: string; nfc: string; enabled: boolean };
-type SectionKey = 'estadisticas' | 'alumnado' | 'profesorado' | 'nfc';
+type SectionKey = 'estadisticas' | 'alumnado' | 'profesorado' | 'nfc alumno' | 'nfc profesor';
 
 type ImportedUser = {
   id: string;
@@ -36,6 +36,16 @@ type OdooCard = {
   nfc: string;
   enUso: boolean;
 };
+
+        // if (fullName.length > 0) {
+        //   parsedData.push({
+        //     id: nif,
+        //     name: fullName,
+        //     rol: 'Profesor', // Rol por defecto
+        //     departamento: '', // Se seleccionará después
+        //   });
+
+
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -120,235 +130,56 @@ export default function HomeScreen() {
 
   React.useEffect(() => {
     if (activeSection === 'alumnado') {
-      setLoading(true);
-      setTimeout(() => {
-        setStudentsData([
-          {
-            group: '1º ESO A',
-            students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport: ['Si', 'No', 'Si'],
-          },
-          {
-            group: '1º ESO B',
-            students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport: ['No', 'Si', 'No'],
-          },
-          {
-            group: '2º ESO A',
-            students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport: ['Si', 'No', 'Si'],
-          },
-          {
-            group: '2º ESO B',
-            students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport: ['No', 'Si', 'No'],
-          },
-          {
-            group: '3º ESO A',
-            students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport: ['Si', 'No', 'Si'],
-          },
-          {
-            group: '3º ESO B',
-            students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport: ['No', 'Si', 'No'],
-          },
-          {
-            group: '4º ESO A',
-            students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport: ['Si', 'No', 'Si'],
-          },
-          {
-            group: '4º ESO B',
-            students: ['García, Ana', 'López, Marta', 'Díaz, Tomás'],
-            transport: ['No', 'Si', 'No'],
-          },
-          {
-            group: '1º BACH CIENCIAS',
-            students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport: ['Si', 'No', 'Si'],
-          },
-          {
-            group: '1º BACH HUMANIDADES',
-            students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport: ['No', 'Si', 'No'],
-          },
-          {
-            group: '2º BACH CIENCIAS',
-            students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport: ['Si', 'No', 'Si'],
-          },
-          {
-            group: '2º BACH HUMANIDADES',
-            students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport: ['No', 'Si', 'No'],
-          },
-          {
-            group: '1º CFGM SMYR',
-            students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport: ['No', 'Si', 'No'],
-          },
-          {
-            group: '2º CFGM SMYR',
-            students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport: ['No', 'Si', 'No'],
-          },
-          {
-            group: '1º CFGM ACMN',
-            students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport: ['No', 'Si', 'No'],
-          },
-          {
-            group: '2º CFGM ACMN',
-            students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport: ['No', 'Si', 'No'],
-          }, {
-            group: '1º CFGS DAM',
-            students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport: ['No', 'Si', 'No'],
-          }, {
-            group: '2º CFGS DAM',
-            students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport: ['No', 'Si', 'No'],
-          },
-          {
-            group: '1º CFGS GFMN',
-            students: ['Hernández, Pablo', 'Morales, Laura'],
-            transport: ['No', 'Si', 'No'],
-          },
+      const fetchAlumnos = async () => {
+        setLoading(true);
+        try {
+          const response = await fetch(`${ODOO_URL}/api/ies/get_students`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ jsonrpc: '2.0', params: {} }),
+          });
+          const result = await response.json();
 
-
-        ]);
+          if (result.result && result.result.status === 'success') {
+            setStudentsData(result.result.data);
+          } else {
+            showSnackMsg('Error al cargar la lista de alumnos.');
+          }
+        } catch (error) {
+          showSnackMsg('Error de red al conectar con Odoo.');
+        }
         setLoading(false);
-      }, 1000); // Simula carga
+      };
+
+      fetchAlumnos();
     }
   }, [activeSection]);
-
   React.useEffect(() => {
     if (activeSection === 'profesorado') {
-      setTeachersLoading(true);
-      setTimeout(() => {
-        setTeachersData([
-          {
-            department: 'Agrarias',
-            teachers: [
-              'Ana Asprón Nebreda',
-              'María de los Reyes Díaz González',
-              'Ifara Dorta Almenar',
-              'Raúl Salcedo Madridejos',
-              'Mónica Saorin Delgado',
-              'Julia Esther Yance González'
-            ]
-          },
-          {
-            department: 'Biología y Geología',
-            teachers: [
-              'Carmen Dolores Hernández García',
-              'Cristina Rodríguez Mendoza'
-            ]
-          },
-          {
-            department: 'Dibujo',
-            teachers: [
-              'Angel Melchor Domínguez Páez'
-            ]
-          },
-          {
-            department: 'Economía',
-            teachers: [
-              'Marcos Rodríguez de Ancos'
-            ]
-          },
-          {
-            department: 'Educación Física',
-            teachers: [
-              'Juan Carlos Hernández García'
-            ]
-          },
-          {
-            department: 'Filosofía',
-            teachers: [
-              'María del Mar Rodríguez González'
-            ]
-          },
-          {
-            department: 'Formacion y Orientación Laboral',
-            teachers: [
-              'Ancor García Rodríguez'
-            ]
-          },
-          {
-            department: 'Francés',
-            teachers: [
-              'Danielle Marie Segalen'
-            ]
-          },
-          {
-            department: 'Geografía e Historia',
-            teachers: [
-              'José Antonio Lima Cruz',
-              'Jaime López Pérez'
-            ]
-          },
-          {
-            department: 'Informática',
-            teachers: [
-              'Lorena García Afonso',
-              'Rayco Guerrero Dámaso',
-              'Reinaldo González Hernández',
-              'Arturo Juan Jiménez González',
-              'María Dolores de León Ascensión',
-              'Melissa Méndez Luis',
-              'Susana Nieto Munguía'
-            ]
-          },
-          {
-            department: 'Inglés',
-            teachers: [
-              'María Jesús Delgado León',
-              'Carmen Dolores Rodríguez Hernández',
-              'Zenaida Sonia Yanes González'
-            ]
-          },
-          {
-            department: 'Lengua + Latín',
-            teachers: [
-              'Ana Belén González Toste',
-              'Sandra María Gutiérrez Arrocha',
-              'María Raquel Luis Trujillo',
-              'Tatiana Pérez Fernández'
-            ]
-          },
-          {
-            department: 'Matemáticas',
-            teachers: [
-              'Vicente Estévez Mesa',
-              'Tiffany López Nicholson',
-              'Eva María Quintero Núñez',
-              'Rafael Andrés Suárez Ruiz',
-            ]
-          },
-          {
-            department: 'Música',
-            teachers: [
-              'Alfonso Marín Romero'
-            ]
-          },
-          {
-            department: 'Orientación/Pedagogía Terapéutica',
-            teachers: [
-              'Paula Álvarez Alonso'
-            ]
-          },
-          {
-            department: 'Religión',
-            teachers: [
-              'Gustavo Márquez Carro'
-            ]
+      const fetchProfesores = async () => {
+        setTeachersLoading(true);
+        try {
+          const response = await fetch(`${ODOO_URL}/api/ies/get_teachers`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ jsonrpc: '2.0', params: {} }),
+          });
+          const result = await response.json();
+          
+          if (result.result && result.result.status === 'success') {
+            setTeachersData(result.result.data);
+          } else {
+            showSnackMsg('Error al cargar la lista de profesores.');
           }
-        ]);
+        } catch (error) {
+          showSnackMsg('Error de red al conectar con Odoo.');
+        }
         setTeachersLoading(false);
-      }, 800);
+      };
+
+      fetchProfesores();
     }
   }, [activeSection]);
 
@@ -417,7 +248,7 @@ export default function HomeScreen() {
 
   // --- LÓGICA NUEVA PARA LA SECCIÓN NFC ---
 
-  const abrirExploradorArchivos = async () => {
+  const abrirExploradorArchivos = async (tipoUsuario: 'alumno' | 'profesor') => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['text/csv', 'application/vnd.ms-excel'],
@@ -432,13 +263,13 @@ export default function HomeScreen() {
         const reader = new FileReader();
         reader.onload = (e) => {
           const texto = e.target?.result as string;
-          procesarTextoCSV(texto);
+          procesarTextoCSV(texto, tipoUsuario);
         };
         reader.readAsText(fileAsset.file, 'UTF-8');
       } else {
         const response = await fetch(fileAsset.uri);
         const texto = await response.text();
-        procesarTextoCSV(texto);
+        procesarTextoCSV(texto, tipoUsuario);
       }
     } catch (err) {
       console.error("Error:", err);
@@ -446,36 +277,78 @@ export default function HomeScreen() {
     }
   };
 
-  const procesarTextoCSV = (csvText: string) => {
-    const lines = csvText.trim().split('\n');
-    if (lines.length < 2) return showSnackMsg('CSV vacío o inválido.');
+  const procesarTextoCSV = (csvText: string, tipoUsuario: 'alumno' | 'profesor') => {
+    if (tipoUsuario === 'alumno') {
+      const lines = csvText.trim().split('\n');
+      if (lines.length < 2) return showSnackMsg('CSV vacío o inválido.');
 
-    const headers = lines[0].split(';').map(h => h.replace(/"/g, '').trim());
-    const parsedData: ImportedUser[] = [];
+      const headers = lines[0].split(';').map(h => h.replace(/"/g, '').trim());
+      const parsedData: ImportedUser[] = [];
 
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line) continue;
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line) continue;
 
-      const values = line.split(';').map(v => v.replace(/"/g, '').trim());
-      const rowData: Record<string, string> = {};
-      headers.forEach((header, index) => { rowData[header] = values[index]; });
+        const values = line.split(';').map(v => v.replace(/"/g, '').trim());
+        const rowData: Record<string, string> = {};
+        headers.forEach((header, index) => { rowData[header] = values[index]; });
 
-      const fullName = `${rowData['Nombre'] || ''} ${rowData['Primer apellido'] || ''} ${rowData['Segundo apellido'] || ''}`.trim();
-      const municipio = rowData['Municipio actual'] || 'DESCONOCIDO';
-      const needsTransport = municipio.toUpperCase() !== 'SAN JUAN DE LA RAMBLA';
+        const fullName = `${rowData['Nombre'] || ''} ${rowData['Primer apellido'] || ''} ${rowData['Segundo apellido'] || ''}`.trim();
+        const municipio = rowData['Municipio actual'] || 'DESCONOCIDO';
+        const needsTransport = municipio.toUpperCase() !== 'SAN JUAN DE LA RAMBLA';
 
-      if (fullName.length > 0) {
-        parsedData.push({
-          id: rowData['Nif - Nie'] || rowData['Cial'] || `ID-${i}`,
-          name: fullName,
-          municipio: municipio,
-          transporte: needsTransport,
-        });
-      }
+        if (fullName.length > 0) {
+          parsedData.push({
+            id: rowData['Nif - Nie'] || rowData['Cial'] || `ID-${i}`,
+            name: fullName,
+            municipio: municipio,
+            transporte: needsTransport,
+            desayuno: false,
+          });
+        }
     }
     setImportData(parsedData);
     showSnackMsg(`Importados ${parsedData.length} alumnos.`);
+  }
+  else{
+      const lines = csvText.trim().split('\n');
+      if (lines.length < 2) return showSnackMsg('CSV vacío o inválido.');
+
+      const rawHeaders = lines[0].split(';').map(h => h.replace(/"/g, '').trim().toUpperCase());
+      const parsedData: ImportedUser[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line) continue;
+
+        const values = line.split(';').map(v => v.replace(/"/g, '').trim());
+        const row: Record<string, string> = {};
+        
+        rawHeaders.forEach((header, idx) => { row[header] = values[idx]; });
+
+        const nif = row['N.I.F./N.I.E.'] || `ID-${i}`;
+        const nombre = row['Nombre'] || '';
+        const apellido1 = row['Primer Apellido'] || '';
+        const apellido2 = row['Segundo Apellido'] || '';
+        const alias = row['Alias'] || '';
+        
+        const fullName = `${nombre} ${apellido1} ${apellido2}`.replace(/\s+/g, ' ').trim();
+
+        if (fullName.length > 0) {
+          parsedData.push({
+            id: nif,
+            name: fullName,
+            municipio: '',
+            transporte: false,
+            desayuno: false,
+          });
+        }
+}
+// Actualizar estado de la UI con parsedData
+  setImportData(parsedData);
+    showSnackMsg(`Importados ${parsedData.length} profesores.`);
+
+  }
   };
 
   const handleAutoFill = () => {
@@ -628,12 +501,16 @@ export default function HomeScreen() {
           <Text variant="titleMedium" style={styles.sidebarTitle}>
             Panel de Control
           </Text>
+          
           <Drawer.Section>
             <Drawer.Item label="Panel de Inicio" active={activeSection === 'estadisticas'} onPress={() => setActiveSection('estadisticas')} icon="view-dashboard-variant" />
             <Drawer.Item label="Alumnado" active={activeSection === 'alumnado'} onPress={() => setActiveSection('alumnado')} icon="account-group" />
-            <Drawer.Item label="Profesorado" active={activeSection === 'profesorado'} onPress={() => setActiveSection('profesorado')} icon="account-tie" />
-            <Drawer.Item label="Vinculación NFC" active={activeSection === 'nfc'} onPress={() => setActiveSection('nfc')} icon="nfc" />
+            <Drawer.Item label="Profesorado" active={activeSection === 'profesorado'} onPress={() => setActiveSection('profesorado')} icon="account-tie" />              
           </Drawer.Section>
+          <List.Accordion title="Vinculación NFC" left={(props) => <List.Icon {...props} icon="nfc" />}>
+            <Drawer.Item label="Vincular alumno" onPress={() => setActiveSection('nfc alumno')} icon="account" />
+            <Drawer.Item label="Vincular profesor" onPress={() => setActiveSection('nfc profesor')} icon="account-tie" />
+          </List.Accordion>
         </View>
         <Drawer.Section style={{ marginTop: 'auto' }}>
           <View style={{ paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#00000022', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -959,14 +836,17 @@ export default function HomeScreen() {
               </Card.Content>
             </Card>
           )}
-        {activeSection === 'nfc' && (
+                  
+        {/* ================== ALUMNADO NFC (SECTION IMPLEMENTADA) ================== */}
+
+        {activeSection === 'nfc alumno' && (
             <Card style={styles.block}>
               <Card.Title 
                 title="Validación de Datos e Inserción" 
                 subtitle="Selecciona un archivo desde tu PC para iniciar"
                 right={() => (
                   <View style={{ flexDirection: 'row', gap: 8, paddingRight: 16 }}>
-                    <Button mode="outlined" icon="folder-open" onPress={abrirExploradorArchivos}>
+                    <Button mode="outlined" icon="folder-open" onPress={() => abrirExploradorArchivos("alumno")}>
                       1. Buscar archivo en PC
                     </Button>
                     <Button mode="contained-tonal" icon="auto-fix" onPress={handleAutoFill} disabled={importData.length === 0}>
@@ -1023,6 +903,69 @@ export default function HomeScreen() {
               </Card.Content>
             </Card>
           )}
+            {/* ================== PROFESOR NFC (SECTION IMPLEMENTADA) ================== */}
+          {activeSection === 'nfc profesor' && (
+            <Card style={styles.block}>
+              <Card.Title 
+                title="Validación de Datos e Inserción" 
+                subtitle="Selecciona un archivo desde tu PC para iniciar"
+                right={() => (
+                  <View style={{ flexDirection: 'row', gap: 8, paddingRight: 16 }}>
+                    <Button mode="outlined" icon="folder-open" onPress={() => abrirExploradorArchivos("profesor")}>
+                      1. Buscar archivo en PC
+                    </Button>
+                    <Button 
+                      mode="contained" 
+                      icon="cloud-upload" 
+                      onPress={subirDatosAOdoo}  // <-- CAMBIO AQUÍ
+                      disabled={importData.length === 0}>
+                      2. Subir a Odoo
+                    </Button>
+                  </View>
+                )} 
+              />
+              <Card.Content>
+                {importData.length === 0 ? (
+                  <View style={{ padding: 40, alignItems: 'center' }}>
+                    <Text variant="bodyLarge" style={{ color: 'gray' }}>No hay datos. Pulsa "Buscar archivo en PC".</Text>
+                  </View>
+                ) : (
+                  <DataTable>
+                    <DataTable.Header>
+                      <DataTable.Title style={{ flex: 2 }}>NIF</DataTable.Title>
+                      <DataTable.Title>Nombre</DataTable.Title>
+                      <DataTable.Title numeric>1º Apellido</DataTable.Title>
+                      <DataTable.Title numeric>2º Apellido</DataTable.Title>
+                      <DataTable.Title numeric>Alias</DataTable.Title>
+                      {/* <DataTable.Title numeric>Nº Tarjeta</DataTable.Title> */}
+                    </DataTable.Header>
+                    {importData.map((row, i) => (
+                      <React.Fragment key={`${row.id}-${i}`}>
+                        <DataTable.Row>
+                          <DataTable.Cell style={{ flex: 2 }}>{row.name}</DataTable.Cell>
+                          <DataTable.Cell><Text numberOfLines={1} style={{ fontSize: 12 }}>{row.municipio}</Text></DataTable.Cell>
+                          <DataTable.Cell numeric>
+                            <Switch value={row.transporte} onValueChange={() => toggleTransporteImport(i)} />
+                          </DataTable.Cell>
+                          <DataTable.Cell numeric>
+                            <Switch value={row.desayuno} onValueChange={() => toggleDesayunoImport(i)} />
+                          </DataTable.Cell>
+                          <DataTable.Cell numeric>
+                            {row.tarjetaFisica ? <Text style={{ fontWeight: 'bold' }}>#{row.tarjetaFisica}</Text> : <Text style={{ color: 'gray' }}>-</Text>}
+                          </DataTable.Cell>
+                          <DataTable.Cell>
+                            {row.nfcId ? row.nfcId : <Text style={{ color: 'gray', fontStyle: 'italic' }}>Sin asignar</Text>}
+                          </DataTable.Cell>
+                        </DataTable.Row>
+                        {i < importData.length - 1 ? <Divider /> : null}
+                      </React.Fragment>
+                    ))}
+                  </DataTable>
+                )}
+              </Card.Content>
+            </Card>
+          )}
+
 
         </ScrollView>
 
