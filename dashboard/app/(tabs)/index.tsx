@@ -14,6 +14,7 @@ import {
   Snackbar,
   Switch,
   Text,
+  TextInput,
   useTheme,
 } from 'react-native-paper';
 
@@ -36,6 +37,20 @@ type ImportedTeacher = {
   alias: string;
   departamento: string;
 }
+
+type StudentItem = {
+  employee_id: number;
+  name: string;
+  photo?: string | null;
+  barcode?: string | null;
+  transport: string | boolean;
+  course?: string;
+};
+
+type StudentsGroup = {
+  group: string;
+  students: StudentItem[];
+};
 
 
 type OdooCard = {
@@ -69,11 +84,12 @@ export default function HomeScreen() {
 
   // Datos principales
   const [rows, setRows] = React.useState<Row[]>([
-    { name: 'García, Ana', group: '2º BACH A', nfc: 'B4:42:3F:89', enabled: true },
-    { name: 'Hernández, Pablo', group: '1º CFGS DAW', nfc: 'Sin vincular', enabled: false },
   ]);
 
-  const [studentsData, setStudentsData] = React.useState<{ group: string; students: string[]; transport: string[] }[]>([]);
+  const [studentsData, setStudentsData] = React.useState<StudentsGroup[]>([]);
+  const [transportLoadingByKey, setTransportLoadingByKey] = React.useState<Record<string, boolean>>({});
+  const [nfcLoadingByKey, setNfcLoadingByKey] = React.useState<Record<string, boolean>>({});
+  const [nfcInputByKey, setNfcInputByKey] = React.useState<Record<string, string>>({});
 
   const [teachersData, setTeachersData] = React.useState<{ department: string; teachers: string[] }[]>([]);
   const [teachersLoading, setTeachersLoading] = React.useState(false);
@@ -148,9 +164,22 @@ export default function HomeScreen() {
             body: JSON.stringify({ jsonrpc: '2.0', params: {} }),
           });
           const result = await response.json();
+          const normalizedResult = result?.result || result;
 
-          if (result.result && result.result.status === 'success') {
-            setStudentsData(result.result.data);
+          if (normalizedResult?.status === 'success') {
+            const formattedData = normalizedResult.data.map((group: any) => ({
+              group: group.group,
+              students: group.students.map((student: any) => ({
+                employee_id: student.employee_id,
+                name: student.name,
+                photo: student.photo || null,
+                barcode: student.barcode || null,
+                transport: parseTransportState(student.transport),
+                course: student.course || 'Sin curso',
+              })),
+            }));
+
+            setStudentsData(formattedData);
           } else {
             showSnackMsg('Error al cargar la lista de alumnos.');
           }
@@ -355,7 +384,7 @@ const procesarTextoCSVProfesor = (csvText: string) => {
     const lines = csvText.trim().split('\n');
     if (lines.length < 2) return showSnackMsg('CSV vacío o inválido.');
     const rawHeaders = lines[0].split(';').map(h => h.replace(/"/g, '').trim().toUpperCase());
-    const parsedData: ImportedTeacher[] = [];
+  const parsedData: ImportedUser[] = [];
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
       if (!line) continue;
@@ -375,8 +404,9 @@ const procesarTextoCSVProfesor = (csvText: string) => {
         parsedData.push({
           id: nif,
           name: fullName,
-          alias: alias,
-          departamento: '',
+          municipio: alias || '-',
+          transporte: false,
+          desayuno: false,
         });
       }
   }
@@ -414,7 +444,8 @@ const procesarTextoCSVProfesor = (csvText: string) => {
   };
 
   // --- CREDENCIALES DE ODOO ---
-  const ODOO_URL = 'https://10.102.11.155';
+  const ODOO_URL = 'https://localhost';
+  // const ODOO_URL = 'https://10.102.11.155';
   const ODOO_DB = 'iesaccess';
   const ODOO_USER = 'admin@admin.com';
   const ODOO_PASS = 'admin';
@@ -527,6 +558,251 @@ const procesarTextoCSVProfesor = (csvText: string) => {
     });
   };
 
+  const buildStudentKey = (groupIndex: number, studentIndex: number) => `${groupIndex}-${studentIndex}`;
+
+  const parseTransportState = (value: string | boolean | undefined) => {
+    if (typeof value === 'boolean') return value;
+    const normalized = (value || '').toString().trim().toLowerCase();
+    return ['true', '1', 'si', 'sí', 'yes', 'y'].includes(normalized);
+  };
+
+  const getOdooErrorMessage = (data: any) => {
+    const normalized = data?.result || data;
+    return (
+      normalized?.message ||
+      data?.message ||
+      data?.error?.data?.message ||
+      data?.error?.message ||
+      null
+    );
+  };
+
+  const callOdooJsonEndpoint = async (route: string, payload: Record<string, unknown>) => {
+    const requestConfig = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include' as const,
+    };
+
+    const rpcResponse = await fetch(`${ODOO_URL}${route}`, {
+      ...requestConfig,
+      body: JSON.stringify({ jsonrpc: '2.0', params: payload }),
+    });
+    const rpcData = await rpcResponse.json();
+    const normalizedRpc = rpcData?.result || rpcData;
+    if (normalizedRpc?.status) {
+      return normalizedRpc;
+    }
+
+    const directResponse = await fetch(`${ODOO_URL}${route}`, {
+      ...requestConfig,
+      body: JSON.stringify(payload),
+    });
+    const directData = await directResponse.json();
+    const normalizedDirect = directData?.result || directData;
+    if (normalizedDirect?.status === 'success') {
+      return normalizedDirect;
+    }
+
+    return {
+      status: 'error',
+      message: getOdooErrorMessage(directData) || getOdooErrorMessage(rpcData) || 'Error de comunicación con Odoo.',
+    };
+  };
+
+  const updateStudentTransportLocal = (groupIndex: number, studentIndex: number, transporteState: boolean) => {
+    setStudentsData((prev) => {
+      const next = [...prev];
+      const currentGroup = next[groupIndex];
+      if (!currentGroup) return prev;
+
+      const updatedStudents = [...currentGroup.students];
+      const currentStudent = updatedStudents[studentIndex];
+      if (!currentStudent) return prev;
+
+      updatedStudents[studentIndex] = {
+        ...currentStudent,
+        transport: transporteState,
+      };
+
+      next[groupIndex] = { ...currentGroup, students: updatedStudents };
+      return next;
+    });
+  };
+
+  const updateStudentNfcLocal = (groupIndex: number, studentIndex: number, nfcCode: string) => {
+    setStudentsData((prev) => {
+      const next = [...prev];
+      const currentGroup = next[groupIndex];
+      if (!currentGroup) return prev;
+
+      const updatedStudents = [...currentGroup.students];
+      const currentStudent = updatedStudents[studentIndex];
+      if (!currentStudent) return prev;
+
+      updatedStudents[studentIndex] = {
+        ...currentStudent,
+        barcode: nfcCode,
+      };
+
+      next[groupIndex] = { ...currentGroup, students: updatedStudents };
+      return next;
+    });
+  };
+
+  const handleToggleStudentTransport = async (groupIndex: number, studentIndex: number) => {
+    const group = studentsData[groupIndex];
+    if (!group) return;
+
+    const student = group.students[studentIndex];
+    const studentName = student?.name || 'Alumno';
+    const employeeId = student?.employee_id;
+    if (employeeId === undefined || employeeId === null) {
+      showSnackMsg(`No se encontro employee_id para ${studentName}.`);
+      return;
+    }
+
+    const currentState = parseTransportState(student.transport);
+    const nextState = !currentState;
+    const studentKey = buildStudentKey(groupIndex, studentIndex);
+
+    setTransportLoadingByKey((prev) => ({ ...prev, [studentKey]: true }));
+    try {
+      const result = await callOdooJsonEndpoint('/api/ies/toggle_transporte', {
+        employee_id: employeeId,
+        transporte_state: nextState,
+      });
+
+      if (result?.status === 'success') {
+        updateStudentTransportLocal(groupIndex, studentIndex, nextState);
+        showSnackMsg(`Transporte actualizado para ${studentName}.`);
+      } else {
+        showSnackMsg(result?.message || 'No se pudo actualizar transporte.');
+      }
+    } catch (error) {
+      showSnackMsg('Error de red al actualizar transporte.');
+    } finally {
+      setTransportLoadingByKey((prev) => ({ ...prev, [studentKey]: false }));
+    }
+  };
+
+  const handleLinkStudentNfc = async (groupIndex: number, studentIndex: number) => {
+    const group = studentsData[groupIndex];
+    if (!group) return;
+
+    const student = group.students[studentIndex];
+    const studentName = student?.name || 'Alumno';
+    const employeeId = student?.employee_id;
+    if (employeeId === undefined || employeeId === null) {
+      showSnackMsg(`No se encontro employee_id para ${studentName}.`);
+      return;
+    }
+
+    const studentKey = buildStudentKey(groupIndex, studentIndex);
+    const nfcCode = (nfcInputByKey[studentKey] || '').trim().toUpperCase();
+    if (!nfcCode) {
+      showSnackMsg('Introduce un codigo NFC antes de vincular.');
+      return;
+    }
+
+    setNfcLoadingByKey((prev) => ({ ...prev, [studentKey]: true }));
+    try {
+      const result = await callOdooJsonEndpoint('/api/ies/link_nfc', {
+        employee_id: employeeId,
+        nfc_id: nfcCode,
+      });
+
+      if (result?.status === 'success') {
+        setNfcInputByKey((prev) => ({ ...prev, [studentKey]: nfcCode }));
+        updateStudentNfcLocal(groupIndex, studentIndex, nfcCode);
+        showSnackMsg(`NFC vinculado para ${studentName}.`);
+      } else {
+        showSnackMsg(result?.message || 'No se pudo vincular el NFC.');
+      }
+    } catch (error) {
+      showSnackMsg('Error de red al vincular NFC.');
+    } finally {
+      setNfcLoadingByKey((prev) => ({ ...prev, [studentKey]: false }));
+    }
+  };
+
+  const renderStudentGroup = (group: StudentsGroup, groupIndex: number) => (
+    <List.Accordion
+      key={`${group.group}-${groupIndex}`}
+      title={group.group}
+      left={(props) => <List.Icon {...props} icon="folder-account" />}
+    >
+      {group.students.map((student, studentIndex) => {
+        const studentKey = buildStudentKey(groupIndex, studentIndex);
+        const transportEnabled = parseTransportState(student.transport);
+        const nfcFromBackend = (student.barcode || '').toString();
+        const nfcValue = nfcInputByKey[studentKey] ?? nfcFromBackend;
+
+        return (
+          <List.Item
+            key={`${student.employee_id}-${studentIndex}`}
+            title={student.name}
+            left={(props) => (
+              <Image
+                {...props}
+                source={
+                  student.photo
+                    ? { uri: `data:image/jpg;base64,${student.photo}` }
+                    : require('../../assets/images/default_photo.jpg')
+                }
+                style={{ width: 40, height: 40, borderRadius: 20 }}
+              />
+            )}
+            description={() => (
+              <View style={styles.studentActionsContainer}>
+                <View style={styles.studentTransportRow}>
+                  <Text variant="labelSmall">Transporte</Text>
+                  {transportLoadingByKey[studentKey] ? (
+                    <ActivityIndicator animating size="small" />
+                  ) : (
+                    <Switch
+                      value={transportEnabled}
+                      onValueChange={() => handleToggleStudentTransport(groupIndex, studentIndex)}
+                    />
+                  )}
+                </View>
+
+                <View style={styles.studentNfcRow}>
+                  <TextInput
+                    mode="outlined"
+                    dense
+                    label="NFC"
+                    placeholder="Ej: A1B2C3D4"
+                    style={styles.studentNfcInput}
+                    value={nfcValue}
+                    onChangeText={(text) =>
+                      setNfcInputByKey((prev) => ({
+                        ...prev,
+                        [studentKey]: text,
+                      }))
+                    }
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                  />
+                  <Button
+                    mode="contained-tonal"
+                    compact
+                    icon="link"
+                    loading={!!nfcLoadingByKey[studentKey]}
+                    disabled={!!nfcLoadingByKey[studentKey]}
+                    onPress={() => handleLinkStudentNfc(groupIndex, studentIndex)}
+                  >
+                    Vincular
+                  </Button>
+                </View>
+              </View>
+            )}
+          />
+        );
+      })}
+    </List.Accordion>
+  );
+
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
       <View style={[styles.sidebar, { backgroundColor: theme.colors.surface }]}>
@@ -540,9 +816,9 @@ const procesarTextoCSVProfesor = (csvText: string) => {
             <Drawer.Item label="Alumnado" active={activeSection === 'alumnado'} onPress={() => setActiveSection('alumnado')} icon="account-group" />
             <Drawer.Item label="Profesorado" active={activeSection === 'profesorado'} onPress={() => setActiveSection('profesorado')} icon="account-tie" />              
           </Drawer.Section>
-          <List.Accordion title="Vinculación NFC" left={(props) => <List.Icon {...props} icon="nfc" />}>
-            <Drawer.Item label="Vincular alumno" onPress={() => setActiveSection('nfc alumno')} icon="account" />
-            <Drawer.Item label="Vincular profesor" onPress={() => setActiveSection('nfc profesor')} icon="account-tie" />
+          <List.Accordion title="Importación Pincel Ekade" left={(props) => <List.Icon {...props} icon="nfc" />}>
+            <Drawer.Item label="Importar alumnos" onPress={() => setActiveSection('nfc alumno')} icon="account" />
+            <Drawer.Item label="Importar profesores" onPress={() => setActiveSection('nfc profesor')} icon="account-tie" />
           </List.Accordion>
         </View>
         <Drawer.Section style={{ marginTop: 'auto' }}>
@@ -674,9 +950,29 @@ const procesarTextoCSVProfesor = (csvText: string) => {
                                 )}
                               </DataTable.Cell>
                               <DataTable.Cell>
-                                <Text style={{ fontStyle: 'italic', color: student.estado === 'FICHADO' ? 'green' : 'gray' }}>
-                                  {student.estado}
-                                </Text>
+                                {activeFilter === 'salidas_anticipadas' ? (
+                                  <Text style={{ fontStyle: 'italic', color: 'gray' }}>
+                                    {student.hora_salida ? `Salida: ${student.hora_salida}` : 'Salida anticipada'}
+                                  </Text>
+                                ) : activeFilter === 'recreo' ? (
+                                  <Text style={{ fontStyle: 'italic', color: 'gray' }}>
+                                    {student.hora_entrada && student.hora_salida
+                                      ? `Salida: ${student.hora_salida} / Entrada: ${student.hora_entrada}`
+                                      : student.hora_entrada
+                                        ? `Entrada: ${student.hora_entrada}`
+                                        : student.hora_salida
+                                          ? `Salida: ${student.hora_salida}`
+                                          : 'Recreo'}
+                                  </Text>
+                                ) : activeFilter === 'retrasos' ? (
+                                  <Text style={{ fontStyle: 'italic', color: 'orange' }}>
+                                    {student.hora_entrada ? `Entrada: ${student.hora_entrada}` : 'Retraso'}
+                                  </Text>
+                                ) : (
+                                  <Text style={{ fontStyle: 'italic', color: student.estado === 'FICHADO' ? 'green' : 'gray' }}>
+                                    {student.estado}
+                                  </Text>
+                                )}
                               </DataTable.Cell>
                             </DataTable.Row>
                             {index < dashboardData.lists[activeFilter].length - 1 && <Divider />}
@@ -692,37 +988,6 @@ const procesarTextoCSVProfesor = (csvText: string) => {
                 </Card.Content>
               </Card>
 
-              <Card style={styles.block}>
-                <Card.Title title="Gestión rápida de permisos" right={() => <Button>Filtrar</Button>} />
-                <Card.Content>
-                  <DataTable>
-                    <DataTable.Header>
-                      <DataTable.Title>Alumno/a</DataTable.Title>
-                      <DataTable.Title>Grupo</DataTable.Title>
-                      <DataTable.Title>Transporte</DataTable.Title>
-                      <DataTable.Title numeric>Permisos</DataTable.Title>
-                    </DataTable.Header>
-                    {rows.map((r, i) => (
-                      <React.Fragment key={`${r.name}-${i}`}>
-                        <DataTable.Row>
-                          <DataTable.Cell>{r.name}</DataTable.Cell>
-                          <DataTable.Cell>{r.group}</DataTable.Cell>
-                          <DataTable.Cell numeric>
-                            <Switch
-                              value={r.enabled}
-                              onValueChange={() => toggleEnabledTransporte(i)}
-                            />
-                          </DataTable.Cell>
-                          <DataTable.Cell numeric>
-                            <Switch value={r.enabled} onValueChange={() => toggleEnabled(i)} />
-                          </DataTable.Cell>
-                        </DataTable.Row>
-                        {i < rows.length - 1 ? <Divider /> : null}
-                      </React.Fragment>
-                    ))}
-                  </DataTable>
-                </Card.Content>
-              </Card>
             </>
           )}
 
@@ -746,27 +1011,9 @@ const procesarTextoCSVProfesor = (csvText: string) => {
                       left={(props) => <List.Icon {...props} icon="folder" color="#c03415" />}
                     >
                       {studentsData
-                        .filter((g) => g.group.includes('ESO'))
-                        .map((group, i) => (
-                          <List.Accordion
-                            key={`eso-${i}`}
-                            title={group.group}
-                            left={(props) => (
-                              <List.Icon {...props} icon="folder-account" />
-                            )}
-                          >
-                            {group.students.map((student, j) => (
-                              <List.Item
-                                key={j}
-                                title={student}
-                                description={`Transporte: ${group.transport[j]}`}
-                                left={(props) => (
-                                  <List.Icon {...props} icon="account" />
-                                )}
-                              />
-                            ))}
-                          </List.Accordion>
-                        ))}
+                        .map((group, index) => ({ group, index }))
+                        .filter(({ group }) => group.group.includes('ESO'))
+                        .map(({ group, index }) => renderStudentGroup(group, index))}
                     </List.Accordion>
 
                     {/* Nivel 1: Bachillerato */}
@@ -775,27 +1022,9 @@ const procesarTextoCSVProfesor = (csvText: string) => {
                       left={(props) => <List.Icon {...props} icon="folder" color="#f2d725" />}
                     >
                       {studentsData
-                        .filter((g) => g.group.includes('BACH'))
-                        .map((group, i) => (
-                          <List.Accordion
-                            key={`bach-${i}`}
-                            title={group.group}
-                            left={(props) => (
-                              <List.Icon {...props} icon="folder-account" />
-                            )}
-                          >
-                            {group.students.map((student, j) => (
-                              <List.Item
-                                key={j}
-                                title={student}
-                                description={`Transporte: ${group.transport[j]}`}
-                                left={(props) => (
-                                  <List.Icon {...props} icon="account" />
-                                )}
-                              />
-                            ))}
-                          </List.Accordion>
-                        ))}
+                        .map((group, index) => ({ group, index }))
+                        .filter(({ group }) => group.group.includes('BACH'))
+                        .map(({ group, index }) => renderStudentGroup(group, index))}
                     </List.Accordion>
 
                     {/* Nivel 1: Ciclos formativos */}
@@ -804,27 +1033,9 @@ const procesarTextoCSVProfesor = (csvText: string) => {
                       left={(props) => <List.Icon {...props} icon="folder" color="#1565C0" />}
                     >
                       {studentsData
-                        .filter((g) => g.group.includes('CFGM') || g.group.includes('CFGS'))
-                        .map((group, i) => (
-                          <List.Accordion
-                            key={`ciclos-${i}`}
-                            title={group.group}
-                            left={(props) => (
-                              <List.Icon {...props} icon="folder-account" />
-                            )}
-                          >
-                            {group.students.map((student, j) => (
-                              <List.Item
-                                key={j}
-                                title={student}
-                                description={`Transporte: ${group.transport[j]}`}
-                                left={(props) => (
-                                  <List.Icon {...props} icon="account" />
-                                )}
-                              />
-                            ))}
-                          </List.Accordion>
-                        ))}
+                        .map((group, index) => ({ group, index }))
+                        .filter(({ group }) => group.group.includes('CFGM') || group.group.includes('CFGS'))
+                        .map(({ group, index }) => renderStudentGroup(group, index))}
                     </List.Accordion>
                   </>
                 )}
@@ -1035,6 +1246,26 @@ const styles = StyleSheet.create({
   kpiContent: { alignItems: 'center' },
   kpiText: { textAlign: 'center' },
   block: { marginTop: 8 },
+  studentActionsContainer: {
+    marginTop: 8,
+    gap: 8,
+  },
+  studentTransportRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    maxWidth: 420,
+  },
+  studentNfcRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    maxWidth: 560,
+  },
+  studentNfcInput: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
   chartPlaceholder: {
     height: 160,
     borderRadius: 12,
