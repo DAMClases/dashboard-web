@@ -444,8 +444,7 @@ const procesarTextoCSVProfesor = (csvText: string) => {
   };
 
   // --- CREDENCIALES DE ODOO ---
-  const ODOO_URL = 'https://localhost';
-  // const ODOO_URL = 'https://10.102.11.155';
+  const ODOO_URL = 'https://10.102.11.155';
   const ODOO_DB = 'iesaccess';
   const ODOO_USER = 'admin@admin.com';
   const ODOO_PASS = 'admin';
